@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>工作日誌</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+	<script type="text/javascript" src="jquery-3.5.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="dx.common.css" />
+    <link rel="stylesheet" type="text/css" href="dx.light.css" />        
+    <script type="text/javascript" src="dx.all.js"></script>
+	<script type="text/javascript" src="exceljs.min.js"></script>
+	<script type="text/javascript" src="FileSaver.min.js"></script>
+    <script type="text/javascript">
+        $(function () {
+		    var init = [{
+                "Date": "2021/06/21",
+                "ProjectName": "Test",
+                "WorkItem": "Test",
+                "Minute": "30"
+            }];
+            var storageArray = JSON.parse(localStorage.getItem('item'));
+			console.log(storageArray);			
+			if(storageArray === null){
+			    storageArray = init;
+			}
+            $("#gridContainer").dxDataGrid({
+                dataSource: storageArray,
+                showBorders: true,
+                showColumnLines: true,
+                showRowLines: true,
+                editing: {
+                    mode: "batch",
+                    allowAdding: true,
+                    allowUpdating: true,
+                    allowDeleting: true
+                },
+                sorting: {
+                    mode: "multiple"
+                },
+                /*filterRow: {
+                    visible: true,
+                    applyFilter: "auto"
+                },*/
+				filterPanel: { visible: true },				
+				columnsAutoWidth: true,
+				filterBuilderPopup: {
+                    position: { of: window, at: "top", my: "top", offset: { y: 10 } },
+                },
+				filterValue: [["Date", "today"]],
+                filterBuilder: {
+                    customOperations: [{
+                        name: "today",
+                        caption: "Today",
+                        dataTypes: ["date"],
+                        icon: "check",
+                        hasValue: false,
+                        calculateFilterExpression: function() {
+						    var today = (new Date()).getDay();
+							console.log(today + "," + getOrderDay);
+                            return [[getOrderDay, "=", today]];
+                        }
+                    }],
+                    allowHierarchicalFields: true
+                },
+                searchPanel: {
+                    visible: true,
+                    width: 240,
+                    placeholder: "Search..."
+                },
+                headerFilter: {
+                    visible: true
+                },
+                remoteOperations: true,
+                repaintChangesOnly: true,   
+                export: {
+                      enabled: true,
+                      allowExportSelectedData: true
+                    },
+                onExporting: function(e) {
+                  var workbook = new ExcelJS.Workbook();
+                  var worksheet = workbook.addWorksheet('WorkItem');
+                  
+                  DevExpress.excelExporter.exportDataGrid({
+                    component: e.component,
+                    worksheet: worksheet,
+                    autoFilterEnabled: true
+                  }).then(function() {
+                    workbook.xlsx.writeBuffer().then(function(buffer) {
+                      saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Employees.xlsx');
+                    });
+                  });
+                  e.cancel = true;
+                },				
+                onSaved: function (e) {
+                    var change = e.changes[0];
+                    var workItems = e.component.option("dataSource");
+                    storageArray = [];
+                    workItems.forEach(function (values) {
+                        storageArray.push(values);
+                    });
+                    localStorage.setItem('item', JSON.stringify(storageArray));
+                },
+                columns: [{
+                    dataField: "Date",
+                    dataType: "date",
+                    width: 100,
+					sortOrder: "asc",
+					format: "MM/dd"
+                    /*format: {
+                        formatter: function (date) {
+                            var month = date.getMonth() + 1,
+                            day = date.getDate(),
+                            year = date.getFullYear();
+                            if (month < 10) {
+                                month = '0' + month;
+                            }
+                            return month + "/" + day;
+                        }
+                    }*/
+                }, {
+                    dataField: "ProjectName",
+					sortOrder: "asc",
+                    width: 150
+                }, {
+                    dataField: "WorkItem"
+                }, {
+                    dataField: "Minute",
+                    caption: "Min",
+                    width: 70
+
+                }, {
+                    caption: "Hr",
+                    width: 70,
+                    calculateCellValue: function (rowData) {
+                        return Math.round(rowData.Minute / 60 * 100000) / 100000;
+                    }
+                }, {
+                    caption: "Week",
+                    width: 70,
+                    calculateCellValue: function (rowData) {
+                        return Math.round(rowData.Minute / 60 * 0.025 * 100000) / 100000;
+                    }
+                }, {
+                    caption: "Remark",
+                    calculateCellValue: function (rowData) {
+                        if (rowData.Date !== undefined) {
+                            return "(" + rowData.Date.substring(5, 10).replace('-', '/') + "," + Math.round(rowData.Minute / 60 * 0.025 * 100000) / 100000 + ")" + rowData.WorkItem;
+                        }
+
+                    }
+                }]
+            });
+			
+			/*var pivotGridChart = $("#pivotgrid-chart").dxChart({
+                 commonSeriesSettings: {
+                     type: "bar"
+                 },
+                 tooltip: {
+                     enabled: true,
+                     format: "currency",
+                     customizeTooltip: function(args) {
+                         return {
+                             html: args.seriesName + " | Total<div class='currency'>" + args.valueText + "</div>"
+                         };
+                     }
+                 },
+                 size: {
+                     height: 200
+                 },
+                 adaptiveLayout: {
+                     width: 450
+                 }
+            }).dxChart("instance");*/
+			
+			
+			var pivotGrid = $("#pivotgrid").dxPivotGrid({
+                allowSortingBySummary: true,
+                allowFiltering: true,
+                showBorders: true,
+                showColumnGrandTotals: true,
+                showRowGrandTotals: true,
+                showRowTotals: true,
+                showColumnTotals: true,
+				
+                fieldChooser: {
+                    enabled: true,
+                    height: 400
+                },
+                dataSource: {
+                    fields: [{
+                        caption: "Project Name",
+                        width: 120,
+                        dataField: "ProjectName",
+                        area: "row",
+                        sortBySummaryField: "Min"
+                    }, {
+                        caption: "Work Item",
+                        dataField: "WorkItem",
+                        width: 150,
+                        area: "row"
+                    }, {
+                        dataField: "Date",
+                        dataType: "datetime",
+                        area: "column",
+                        format: {
+                            formatter: function (date) {
+                                var month = date.getMonth() + 1,
+                                day = date.getDate(),
+                                year = date.getFullYear();
+                                if (month < 10) {
+                                    month = '0' + month;
+                                }
+                                return month + "/" + day;
+                            }
+                        }
+                    }, {
+                        groupName: "Date",
+                        groupInterval: "day",
+                        visible: false
+                    }, {
+                        caption: "Min",
+                        dataField: "Minute",
+                        dataType: "number",
+                        summaryType: "sum",
+                        area: "data"
+                    }, {
+                        caption: "Hr",
+                        dataField: "Minute",
+                        dataType: "number",
+                        summaryType: "sum",
+                        area: "data",
+						customizeText: function (cellInfo) {                            
+							if(cellInfo !== undefined && cellInfo.value !== undefined && cellInfo.value > 0){	
+								return "" + Math.round(cellInfo.value / 60 * 100000) / 100000 + "";
+							}
+							return "";
+                        }
+                    }, {
+                        caption: "Week",
+                        dataField: "Minute",
+                        dataType: "number",
+                        summaryType: "sum",
+                        area: "data",
+						customizeText: function (cellInfo) {                            
+							if(cellInfo !== undefined && cellInfo.value !== undefined && cellInfo.value > 0){	
+								return "" + Math.round(cellInfo.value / 60 * 0.025 * 100000) / 100000 + "";
+							}
+							return "";
+                        }
+                    }],
+                    store: storageArray
+                }
+            }).dxPivotGrid("instance");
+	        
+            /*pivotGrid.bindChart(pivotGridChart, {
+                dataFieldsDisplayMode: "splitPanes",
+                alternateDataFields: false
+            });*/
+			function getOrderDay(rowData) {			    
+                return (new Date(rowData.Date)).getDay();
+            }
+			
+        });
+    </script>
+</head>
+<body>
+    <div class="demo-container">
+	    <div id="gridContainer"></div> 
+		<br>        
+        <div id="pivotgrid"></div>		
+    </div>
+</body>
+</html>
